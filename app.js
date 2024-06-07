@@ -1,5 +1,6 @@
 const express = require('express');
 const fs = require('fs');
+const { param, validationResult } = require('express-validator');
 const { rateLimit } = require('express-rate-limit');
 
 const app = express();
@@ -27,6 +28,27 @@ app.get('/api/v1/tours', limiter, (req, res) => {
     },
   });
 });
+app.get(
+  '/api/v1/tours/:id',
+  limiter,
+  param('id').notEmpty().isNumeric().withMessage('id must be numeric').escape(),
+  (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+    // If validation passed, proceed with the request handling
+    const tourId = req.params.id;
+    // Fetch and return tour data by ID
+    const tour = tours[tourId];
+    res.status(200).json({
+      status: 'success',
+      data: {
+        tour,
+      },
+    });
+  }
+);
 
 app.post('/api/v1/tours', limiter, (req, res) => {
   console.log(req.body);
