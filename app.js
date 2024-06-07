@@ -28,6 +28,7 @@ app.get('/api/v1/tours', limiter, (req, res) => {
     },
   });
 });
+
 app.get(
   '/api/v1/tours/:id',
   limiter,
@@ -41,12 +42,19 @@ app.get(
     const tourId = req.params.id;
     // Fetch and return tour data by ID
     const tour = tours[tourId];
-    res.status(200).json({
-      status: 'success',
-      data: {
-        tour,
-      },
-    });
+    if (tour) {
+      res.status(200).json({
+        status: 'success',
+        data: {
+          tour,
+        },
+      });
+    } else {
+      res.status(404).json({
+        status: 'failed',
+        message: `Tour with id ${tourId} does not exist`,
+      });
+    }
   }
 );
 
