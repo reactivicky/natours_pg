@@ -32,11 +32,15 @@ app.get('/api/v1/tours', limiter, (req, res) => {
 app.get(
   '/api/v1/tours/:id',
   limiter,
-  param('id').notEmpty().isNumeric().withMessage('id must be numeric').escape(),
+  param('id')
+    .isAlphanumeric()
+    .withMessage('id must be alphanumeric')
+    .trim()
+    .escape(),
   (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
+      return res.status(400).json({ status: 'failed', errors: errors.array() });
     }
     // If validation passed, proceed with the request handling
     const tourId = req.params.id;
