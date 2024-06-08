@@ -1,0 +1,6 @@
+CREATE TABLE tour_images (
+  id SERIAL PRIMARY KEY,
+  tour_id INT NOT NULL,
+  image VARCHAR(255) NOT NULL,
+  FOREIGN KEY (tour_id) REFERENCES tours(id) ON DELETE CASCADE
+);
