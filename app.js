@@ -94,7 +94,7 @@ app.post('/api/v1/tours', limiter, (req, res) => {
   );
 });
 
-const port = process.env.PORT;
+const port = process.env.PORT || 3000;
 app.listen(port, async () => {
   try {
     await createConnection().connect();
