@@ -1,12 +1,13 @@
 import pg from 'pg';
 const { Client } = pg;
 
-const client = new Client({
-  user: process.env.USER,
-  host: 'localhost',
-  database: 'postgres',
-  password: 'postgres',
-  port: 5432,
-});
+const createConnection = () =>
+  new Client({
+    user: process.env.PG_USER,
+    host: process.env.PG_HOST,
+    database: process.env.PG_DATABASE,
+    password: process.env.PG_PASSWORD,
+    port: process.env.PG_PORT,
+  });
 
-export default client;
+export default createConnection;

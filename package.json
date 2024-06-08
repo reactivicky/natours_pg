@@ -11,6 +11,7 @@
   "author": "Vignesh",
   "license": "ISC",
   "dependencies": {
+    "dotenv": "^16.4.5",
     "express": "^4.19.2",
     "express-rate-limit": "^7.3.0",
     "express-validator": "^7.1.0",

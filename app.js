@@ -1,10 +1,12 @@
+import { config } from 'dotenv';
+config();
 import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
 import { param, validationResult } from 'express-validator';
 import { rateLimit } from 'express-rate-limit';
-import client from './createConnection.js';
+import createConnection from './createConnection.js';
 
 const __filename = fileURLToPath(import.meta.url); // get the resolved path to the file
 const __dirname = path.dirname(__filename); // get the name of the directory
@@ -92,10 +94,10 @@ app.post('/api/v1/tours', limiter, (req, res) => {
   );
 });
 
-const port = 3000;
+const port = process.env.PORT;
 app.listen(port, async () => {
   try {
-    await client.connect();
+    await createConnection().connect();
     console.log('Connected to db...');
     console.log(`App listening on port ${port}...`);
   } catch (error) {
