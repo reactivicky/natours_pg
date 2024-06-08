@@ -1,7 +1,13 @@
-const express = require('express');
-const fs = require('fs');
-const { param, validationResult } = require('express-validator');
-const { rateLimit } = require('express-rate-limit');
+import express from 'express';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import fs from 'fs';
+import { param, validationResult } from 'express-validator';
+import { rateLimit } from 'express-rate-limit';
+import client from './createConnection.js';
+
+const __filename = fileURLToPath(import.meta.url); // get the resolved path to the file
+const __dirname = path.dirname(__filename); // get the name of the directory
 
 const app = express();
 
@@ -87,6 +93,12 @@ app.post('/api/v1/tours', limiter, (req, res) => {
 });
 
 const port = 3000;
-app.listen(port, () => {
-  console.log(`App listening on port ${port}...`);
+app.listen(port, async () => {
+  try {
+    await client.connect();
+    console.log('Connected to db...');
+    console.log(`App listening on port ${port}...`);
+  } catch (error) {
+    console.error('Could not connect to db!', error);
+  }
 });
