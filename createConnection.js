@@ -2,7 +2,7 @@ import pg from 'pg';
 const { Client } = pg;
 
 const client = new Client({
-  user: 'postgres',
+  user: process.env.USER,
   host: 'localhost',
   database: 'postgres',
   password: 'postgres',
