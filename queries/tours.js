@@ -51,3 +51,8 @@ export const getTourQuery = `
   GROUP BY 
       t.id;
 `;
+
+export const insertTour = `
+    INSERT INTO tours ()
+    VALUES ();
+`;
