@@ -96,7 +96,10 @@ app.post('/api/v1/tours', limiter, createTourValidation(), async (req, res) => {
     images,
   } = req.body;
 
+  const clientPool = await client.connect();
+
   try {
+    await clientPool.query('BEGIN');
     const tourResponse = await client.query(insertTour, [
       name,
       duration,
@@ -113,14 +116,13 @@ app.post('/api/v1/tours', limiter, createTourValidation(), async (req, res) => {
       startDates,
       tour.id
     );
-    await client.query(generateInsertStartDatesQuery);
-
+    await clientPool.query(generateInsertStartDatesQuery);
     const generateInsertTourImagesQuery = insertTourImagesQuery(
       images,
       tour.id
     );
-    await client.query(generateInsertTourImagesQuery);
-
+    await clientPool.query(generateInsertTourImagesQuery);
+    await clientPool.query('COMMIT');
     res.status(201).json({
       status: 'success',
       data: {
@@ -129,10 +131,13 @@ app.post('/api/v1/tours', limiter, createTourValidation(), async (req, res) => {
       },
     });
   } catch (error) {
+    await clientPool.query('ROLLBACK');
     res.status(404).json({
       status: 'failed',
       message: error,
     });
+  } finally {
+    clientPool.release();
   }
 });
 
