@@ -1,11 +1,12 @@
 import { config } from 'dotenv';
 config();
 import express from 'express';
-import { param, validationResult } from 'express-validator';
+import { validationResult } from 'express-validator';
 import { rateLimit } from 'express-rate-limit';
 import createConnection from './createConnection.js';
 import { getAllToursQuery, getTourQuery } from './queries/tours.js';
-import { createTourValidation } from './validations/createTour.js';
+import createTourValidation from './validations/createTour.js';
+import getTourValidation from './validations/getTour.js';
 
 const app = express();
 const client = createConnection();
@@ -19,8 +20,6 @@ const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 100, // limit each IP to 100 requests per windowMs
 });
-
-const tourValidationsArray = createTourValidation();
 
 app.get('/api/v1/tours', limiter, async (req, res) => {
   try {
@@ -43,8 +42,7 @@ app.get('/api/v1/tours', limiter, async (req, res) => {
 
 app.get(
   '/api/v1/tours/:id',
-  limiter,
-  param('id').isNumeric().withMessage('id must be numeric').trim().escape(),
+  [limiter, getTourValidation()],
   async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -77,42 +75,46 @@ app.get(
   }
 );
 
-app.post('/api/v1/tours', limiter, tourValidationsArray, async (req, res) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).json({ status: 'failed', errors: errors.array() });
+app.post(
+  '/api/v1/tours',
+  [limiter, createTourValidation()],
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ status: 'failed', errors: errors.array() });
+    }
+
+    const {
+      name,
+      duration,
+      maxGroupSize,
+      difficulty,
+      price,
+      summary,
+      description,
+      imageCover,
+      startDates,
+      tourImages,
+    } = req.body;
+
+    console.log({
+      name,
+      duration,
+      maxGroupSize,
+      difficulty,
+      price,
+      summary,
+      description,
+      imageCover,
+      startDates,
+      tourImages,
+    });
+
+    // try {
+    //   const tourRes = await client.query(insertTour, []);
+    // } catch (error) {}
   }
-
-  const {
-    name,
-    duration,
-    maxGroupSize,
-    difficulty,
-    price,
-    summary,
-    description,
-    imageCover,
-    startDates,
-    tourImages,
-  } = req.body;
-
-  console.log({
-    name,
-    duration,
-    maxGroupSize,
-    difficulty,
-    price,
-    summary,
-    description,
-    imageCover,
-    startDates,
-    tourImages,
-  });
-
-  // try {
-  //   const tourRes = await client.query(insertTour, []);
-  // } catch (error) {}
-});
+);
 
 const port = process.env.PORT || 3000;
 app.listen(port, async () => {
