@@ -4,7 +4,13 @@ import express from 'express';
 import { validationResult } from 'express-validator';
 import { rateLimit } from 'express-rate-limit';
 import createConnection from './createConnection.js';
-import { getAllToursQuery, getTourQuery } from './queries/tours.js';
+import {
+  getAllToursQuery,
+  getTourQuery,
+  insertTour,
+  insertStartDatesQuery,
+  insertTourImagesQuery,
+} from './queries/tours.js';
 import createTourValidation from './validations/createTour.js';
 import getTourValidation from './validations/getTour.js';
 
@@ -97,22 +103,44 @@ app.post(
       images,
     } = req.body;
 
-    console.log({
-      name,
-      duration,
-      maxGroupSize,
-      difficulty,
-      price,
-      summary,
-      description,
-      imageCover,
-      startDates,
-      images,
-    });
+    try {
+      const tourResponse = await client.query(insertTour, [
+        name,
+        duration,
+        maxGroupSize,
+        difficulty,
+        price,
+        summary,
+        description,
+        imageCover,
+      ]);
+      const tour = tourResponse.rows[0];
 
-    // try {
-    //   const tourRes = await client.query(insertTour, []);
-    // } catch (error) {}
+      const generateInsertStartDatesQuery = insertStartDatesQuery(
+        startDates,
+        tour.id
+      );
+      await client.query(generateInsertStartDatesQuery);
+
+      const generateInsertTourImagesQuery = insertTourImagesQuery(
+        images,
+        tour.id
+      );
+      await client.query(generateInsertTourImagesQuery);
+
+      res.status(201).json({
+        status: 'success',
+        data: {
+          tour,
+          generateInsertTourImagesQuery,
+        },
+      });
+    } catch (error) {
+      res.status(404).json({
+        status: 'failed',
+        message: error,
+      });
+    }
   }
 );
 

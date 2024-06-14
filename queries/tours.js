@@ -53,6 +53,21 @@ export const getTourQuery = `
 `;
 
 export const insertTour = `
-    INSERT INTO tours ()
-    VALUES ();
+    INSERT INTO tours (name, duration, maxGroupSize, difficulty, price, summary, description, imageCover)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+    RETURNING *;
+`;
+
+// Insert start dates into the tour_dates table
+export const insertStartDatesQuery = (startDates, tourId) => `
+INSERT INTO tour_dates (tour_id, start_date)
+VALUES ${startDates
+  .map((startDate) => `(${tourId}, '${startDate}')`)
+  .join(', ')}
+`;
+
+// Insert tour images into the tour_images table
+export const insertTourImagesQuery = (tourImages, tourId) => `
+INSERT INTO tour_images (tour_id, image)
+VALUES ${tourImages.map((image) => `(${tourId}, '${image}')`).join(', ')}
 `;
