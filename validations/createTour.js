@@ -49,9 +49,35 @@ const createTourValidation = () => [
     .trim()
     .escape(),
   body('startDates').isArray().withMessage('Start dates must be an array'),
-  body('startDates.*').isISO8601().withMessage('Invalid start date format'),
-  body('tourImages').isArray().withMessage('Tour images must be an array'),
-  body('tourImages.*').isURL().withMessage('Invalid image URL'),
+  body('startDates.*')
+    .matches(/^\d{4}-\d{2}-\d{2},\d{2}:\d{2}$/)
+    .withMessage('Date must be in the format YYYY-MM-DD,HH:MM')
+    .custom((value) => {
+      const [date, time] = value.split(',');
+      const isValidDate = (date) => {
+        const [year, month, day] = date.split('-').map(Number);
+        const dateObject = new Date(year, month - 1, day);
+        return (
+          dateObject.getFullYear() === year &&
+          dateObject.getMonth() === month - 1 &&
+          dateObject.getDate() === day
+        );
+      };
+      const isValidTime = (time) => {
+        const [hour, minute] = time.split(':').map(Number);
+        return hour >= 0 && hour < 24 && minute >= 0 && minute < 60;
+      };
+
+      if (!isValidDate(date)) {
+        throw new Error('Invalid date');
+      }
+      if (!isValidTime(time)) {
+        throw new Error('Invalid time');
+      }
+      return true;
+    }),
+  body('images').isArray().withMessage('Tour images must be an array'),
+  body('images.*').isURL().withMessage('Invalid image URL'),
 ];
 
 export default createTourValidation;

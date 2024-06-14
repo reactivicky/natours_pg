@@ -94,7 +94,7 @@ app.post(
       description,
       imageCover,
       startDates,
-      tourImages,
+      images,
     } = req.body;
 
     console.log({
@@ -107,7 +107,7 @@ app.post(
       description,
       imageCover,
       startDates,
-      tourImages,
+      images,
     });
 
     // try {
