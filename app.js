@@ -10,9 +10,11 @@ import {
   insertTour,
   insertStartDatesQuery,
   insertTourImagesQuery,
+  deleteTourQuery,
 } from './queries/tours.js';
 import createTourValidation from './validations/createTour.js';
-import getTourValidation from './validations/getTour.js';
+import tourIdValidation from './validations/getTour.js';
+import updateTourValidation from './validations/updateTour.js';
 
 const app = express();
 const client = createConnection();
@@ -46,7 +48,7 @@ app.get('/api/v1/tours', limiter, async (req, res) => {
   }
 });
 
-app.get('/api/v1/tours/:id', limiter, getTourValidation(), async (req, res) => {
+app.get('/api/v1/tours/:id', limiter, tourIdValidation(), async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     return res.status(400).json({ status: 'failed', errors: errors.array() });
@@ -96,50 +98,217 @@ app.post('/api/v1/tours', limiter, createTourValidation(), async (req, res) => {
     images,
   } = req.body;
 
-  const clientPool = await client.connect();
-
   try {
-    await clientPool.query('BEGIN');
-    const tourResponse = await client.query(insertTour, [
-      name,
-      duration,
-      maxGroupSize,
-      difficulty,
-      price,
-      summary,
-      description,
-      imageCover,
-    ]);
-    const tour = tourResponse.rows[0];
+    const clientPool = await client.connect();
 
-    const generateInsertStartDatesQuery = insertStartDatesQuery(
-      startDates,
-      tour.id
-    );
-    await clientPool.query(generateInsertStartDatesQuery);
-    const generateInsertTourImagesQuery = insertTourImagesQuery(
-      images,
-      tour.id
-    );
-    await clientPool.query(generateInsertTourImagesQuery);
-    await clientPool.query('COMMIT');
-    res.status(201).json({
-      status: 'success',
-      data: {
-        tour,
+    try {
+      await clientPool.query('BEGIN');
+      const tourResponse = await client.query(insertTour, [
+        name,
+        duration,
+        maxGroupSize,
+        difficulty,
+        price,
+        summary,
+        description,
+        imageCover,
+      ]);
+      const tour = tourResponse.rows[0];
+
+      const generateInsertStartDatesQuery = insertStartDatesQuery(startDates);
+      const insertedDates = await clientPool.query(
+        generateInsertStartDatesQuery,
+        [tour.id, ...startDates]
+      );
+      const insertedDatesArray = insertedDates.rows.map(
+        (row) => row.start_date
+      );
+      const generateInsertTourImagesQuery = insertTourImagesQuery(images);
+      const insertedImages = await clientPool.query(
         generateInsertTourImagesQuery,
-      },
-    });
-  } catch (error) {
-    await clientPool.query('ROLLBACK');
-    res.status(404).json({
+        [tour.id, ...images]
+      );
+      const insertedImagesArray = insertedImages.rows.map((row) => row.image);
+      await clientPool.query('COMMIT');
+      res.status(201).json({
+        status: 'success',
+        data: {
+          tour: {
+            ...tour,
+            startDates: insertedDatesArray,
+            images: insertedImagesArray,
+          },
+        },
+      });
+    } catch (error) {
+      await clientPool.query('ROLLBACK');
+      res.status(404).json({
+        status: 'failed',
+        message: error,
+      });
+    } finally {
+      clientPool.release();
+    }
+  } catch (e) {
+    res.status(500).json({
       status: 'failed',
-      message: error,
+      message: `Internal server error, ${e}`,
     });
-  } finally {
-    clientPool.release();
   }
 });
+
+app.patch(
+  '/api/v1/tours/:id',
+  limiter,
+  [tourIdValidation(), updateTourValidation()],
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ status: 'failed', errors: errors.array() });
+    }
+    // If validation passed, proceed with the request handling
+    const tourId = req.params.id;
+    const updates = req.body;
+
+    try {
+      const clientPool = await client.connect();
+      try {
+        await client.query('BEGIN');
+
+        // Build the SET part of the update query dynamically based on the request body
+        const setClauses = [];
+        const values = [];
+        let queryIndex = 1;
+
+        for (let key in updates) {
+          if (key !== 'startDates' && key !== 'images') {
+            setClauses.push(`${key} = $${queryIndex}`);
+            values.push(updates[key]);
+            queryIndex++;
+          }
+        }
+
+        if (setClauses.length > 0) {
+          const updateTourQuery = `
+          UPDATE tours
+          SET ${setClauses.join(', ')}
+          WHERE id = $${queryIndex}
+          RETURNING *;
+        `;
+          values.push(tourId);
+
+          const result = await clientPool.query(updateTourQuery, values);
+
+          if (result.rowCount === 0) {
+            throw new Error('Tour not found');
+          }
+
+          // Update start dates if provided
+          if (updates.startDates) {
+            await clientPool.query(
+              `DELETE FROM tour_dates WHERE tour_id = $1`,
+              [tourId]
+            );
+            const generateInsertStartDatesQuery = insertStartDatesQuery(
+              updates.startDates
+            );
+            await clientPool.query(generateInsertStartDatesQuery, [
+              tourId,
+              ...updates.startDates,
+            ]);
+          }
+
+          // Update tour images if provided
+          if (updates.images) {
+            await clientPool.query(
+              `DELETE FROM tour_images WHERE tour_id = $1`,
+              [tourId]
+            );
+            const generateInsertTourImagesQuery = insertTourImagesQuery(
+              updates.images
+            );
+            await clientPool.query(generateInsertTourImagesQuery, [
+              tourId,
+              ...updates.images,
+            ]);
+          }
+
+          const updatedTour = await clientPool.query(getTourQuery, [tourId]);
+
+          await clientPool.query('COMMIT');
+
+          res.status(200).json({
+            status: 'success',
+            data: {
+              tour: updatedTour.rows[0],
+            },
+          });
+        }
+      } catch (error) {
+        await clientPool.query('ROLLBACK');
+        res.status(404).json({
+          status: 'failed',
+          message: error,
+        });
+      } finally {
+        clientPool.release();
+      }
+    } catch (error) {
+      res.status(500).json({
+        status: 'failed',
+        message: `Internal server error, ${error}`,
+      });
+    }
+  }
+);
+
+app.delete(
+  '/api/v1/tours/:id',
+  limiter,
+  tourIdValidation(),
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ status: 'failed', errors: errors.array() });
+    }
+
+    const tourId = req.params.id;
+
+    try {
+      const clientPool = await client.connect();
+
+      try {
+        await clientPool.query('BEGIN');
+
+        const deletedTour = await client.query(deleteTourQuery, [tourId]);
+
+        if (deletedTour.rowCount === 0) {
+          throw new Error('Tour not found');
+        }
+        await clientPool.query('COMMIT');
+        res.status(200).json({
+          status: 'success',
+          data: {
+            deletedTour: deletedTour.rows[0],
+          },
+        });
+      } catch (error) {
+        await clientPool.query('ROLLBACK');
+        res.status(404).json({
+          status: 'failed',
+          message: error,
+        });
+      } finally {
+        clientPool.release();
+      }
+    } catch (error) {
+      res.status(500).json({
+        status: 'failed',
+        message: `Internal server error, ${error}`,
+      });
+    }
+  }
+);
 
 const port = process.env.PORT || 3000;
 app.listen(port, async () => {

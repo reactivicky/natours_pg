@@ -6,10 +6,7 @@ CREATE TABLE tour_images (
 );
 
 INSERT INTO tour_images (tour_id, image)
-VALUES (0, 'tour-1-1.jpg'),
-(0, 'tour-1-2.jpg'),
-(0, 'tour-1-3.jpg'),
-(1, 'tour-2-1.jpg'),
+VALUES (1, 'tour-2-1.jpg'),
 (1, 'tour-2-2.jpg'),
 (1, 'tour-2-3.jpg'),
 (2, 'tour-3-1.jpg'),

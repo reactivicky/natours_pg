@@ -59,15 +59,23 @@ export const insertTour = `
 `;
 
 // Insert start dates into the tour_dates table
-export const insertStartDatesQuery = (startDates, tourId) => `
+export const insertStartDatesQuery = (startDates) => `
 INSERT INTO tour_dates (tour_id, start_date)
 VALUES ${startDates
-  .map((startDate) => `(${tourId}, '${startDate}')`)
-  .join(', ')}
-`;
+  .map((date, idx) => `($1, $${idx + 2})`)
+  .join(', ')} RETURNING *`;
 
 // Insert tour images into the tour_images table
-export const insertTourImagesQuery = (tourImages, tourId) => `
+export const insertTourImagesQuery = (tourImages) => `
 INSERT INTO tour_images (tour_id, image)
-VALUES ${tourImages.map((image) => `(${tourId}, '${image}')`).join(', ')}
+VALUES ${tourImages
+  .map((image, idx) => `($1, $${idx + 2})`)
+  .join(', ')} RETURNING *
+`;
+
+// Delete the tour along with its associated start dates and images
+export const deleteTourQuery = `
+    DELETE FROM tours
+    WHERE id = $1
+    RETURNING *;
 `;
