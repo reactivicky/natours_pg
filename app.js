@@ -1,6 +1,7 @@
 import { config } from 'dotenv';
 config();
 import express from 'express';
+import morgan from 'morgan';
 import { validationResult } from 'express-validator';
 import { rateLimit } from 'express-rate-limit';
 import createConnection from './createConnection.js';
@@ -13,10 +14,12 @@ import {
   deleteTourQuery,
 } from './queries/tours.js';
 import createTourValidation from './validations/createTour.js';
-import tourIdValidation from './validations/tourId.js';
+import idValidation from './validations/id.js';
 import updateTourValidation from './validations/updateTour.js';
+import { getAllUsersQuery, getUserQuery } from './queries/users.js';
 
 const app = express();
+app.use(morgan('dev'));
 const client = createConnection();
 
 // Middleware to parse JSON bodies, limited to 10KB
@@ -26,7 +29,7 @@ app.use(express.urlencoded({ extended: true, limit: '10kb' }));
 
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
+  limit: 100, // limit each IP to 100 requests per windowMs
 });
 app.use(limiter);
 
@@ -299,6 +302,65 @@ const deleteTour = async (req, res) => {
   }
 };
 
+const getAllUsers = async (req, res) => {
+  try {
+    const usersRes = await client.query(getAllUsersQuery);
+    const users = usersRes.rows;
+    res.status(200).json({
+      status: 'success',
+      results: usersRes.rowCount,
+      data: {
+        users,
+      },
+    });
+  } catch (error) {
+    res.status(404).json({
+      status: 'failed',
+      message: error,
+    });
+  }
+};
+
+const createUser = async () => {};
+
+const getUser = async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({
+      status: 'failed',
+      message: errors,
+    });
+  }
+
+  const userId = req.params.id;
+
+  try {
+    const userRes = await client.query(getUserQuery, [userId]);
+
+    if (userRes.rowCount === 0) {
+      return res.status(404).json({
+        status: 'failed',
+        message: `User with id ${userId} does not exist`,
+      });
+    }
+    res.status(200).json({
+      status: 'success',
+      data: {
+        user: userRes.rows[0],
+      },
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: 'failed',
+      message: error,
+    });
+  }
+};
+
+const updateUser = async () => {};
+
+const deleteUser = async () => {};
+
 app
   .route('/api/v1/tours')
   .get(getAllTours)
@@ -306,9 +368,16 @@ app
 
 app
   .route('/api/v1/tours/:id')
-  .get(tourIdValidation(), getTour)
-  .patch([tourIdValidation(), updateTourValidation()], updateTour)
-  .delete(tourIdValidation(), deleteTour);
+  .get(idValidation(), getTour)
+  .patch([idValidation(), updateTourValidation()], updateTour)
+  .delete(idValidation(), deleteTour);
+
+app.route('/api/v1/users').get(getAllUsers).post(createUser);
+app
+  .route('/api/v1/users/:id')
+  .get(idValidation(), getUser)
+  .patch(idValidation(), updateUser)
+  .delete(idValidation(), deleteUser);
 
 const port = process.env.PORT || 3000;
 app.listen(port, async () => {
