@@ -19,6 +19,7 @@ import idValidation from './validations/id.js';
 import updateTourValidation from './validations/updateTour.js';
 import {
   createUserQuery,
+  deleteUserQuery,
   getAllUsersQuery,
   getUserQuery,
   updateUserQuery,
@@ -462,7 +463,37 @@ const updateUser = async (req, res) => {
   }
 };
 
-const deleteUser = async () => {};
+const deleteUser = async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ status: 'failed', errors: errors.array() });
+  }
+  const userId = req.params.id;
+  try {
+    const deletedUser = await client.query(deleteUserQuery, [userId]);
+
+    if (deletedUser.rowCount === 0) {
+      throw new Error('User not found');
+    }
+    res.status(200).json({
+      status: 'success',
+      data: {
+        deletedUser: deletedUser.rows[0],
+      },
+    });
+  } catch (error) {
+    if (Object.hasOwn(error, 'message')) {
+      return res.status(404).json({
+        status: 'failed',
+        message: error.message,
+      });
+    }
+    res.status(404).json({
+      status: 'failed',
+      message: error,
+    });
+  }
+};
 
 app
   .route('/api/v1/tours')

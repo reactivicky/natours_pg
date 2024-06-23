@@ -26,3 +26,9 @@ export const updateUserQuery = (setClauses, queryIndex) => `
   WHERE id = $${queryIndex}
   RETURNING id, name, email, role, active, photo;
 `;
+
+export const deleteUserQuery = `
+  DELETE FROM users
+  WHERE id = $1
+  RETURNING id, name, email, role, active, photo;
+`;
