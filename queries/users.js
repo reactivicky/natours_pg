@@ -19,3 +19,10 @@ export const createUserQuery = `
   VALUES ($1, $2, $3, $4, $5, $6)
   RETURNING id, name, email, role, active, photo;
 `;
+
+export const updateUserQuery = (setClauses, queryIndex) => `
+  UPDATE users
+  SET ${setClauses.join(', ')}
+  WHERE id = $${queryIndex}
+  RETURNING id, name, email, role, active, photo;
+`;

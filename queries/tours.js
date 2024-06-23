@@ -52,9 +52,16 @@ export const getTourQuery = `
       t.id;
 `;
 
-export const insertTour = `
+export const createTourQuery = `
     INSERT INTO tours (name, duration, maxGroupSize, difficulty, price, summary, description, imageCover)
     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+    RETURNING *;
+`;
+
+export const updateTourQuery = (setClauses, queryIndex) => `
+    UPDATE tours
+    SET ${setClauses.join(', ')}
+    WHERE id = $${queryIndex}
     RETURNING *;
 `;
 

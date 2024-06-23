@@ -8,10 +8,11 @@ import createConnection from './createConnection.js';
 import {
   getAllToursQuery,
   getTourQuery,
-  insertTour,
+  createTourQuery,
   insertStartDatesQuery,
   insertTourImagesQuery,
   deleteTourQuery,
+  updateTourQuery,
 } from './queries/tours.js';
 import createTourValidation from './validations/createTour.js';
 import idValidation from './validations/id.js';
@@ -20,8 +21,10 @@ import {
   createUserQuery,
   getAllUsersQuery,
   getUserQuery,
+  updateUserQuery,
 } from './queries/users.js';
 import createUserValidation from './validations/createUser.js';
+import updateUserValidation from './validations/updateUser.js';
 
 const app = express();
 app.use(morgan('dev'));
@@ -112,7 +115,7 @@ const createTour = async (req, res) => {
 
     try {
       await clientPool.query('BEGIN');
-      const tourResponse = await client.query(insertTour, [
+      const tourResponse = await client.query(createTourQuery, [
         name,
         duration,
         maxGroupSize,
@@ -194,15 +197,12 @@ const updateTour = async (req, res) => {
       }
 
       if (setClauses.length > 0) {
-        const updateTourQuery = `
-        UPDATE tours
-        SET ${setClauses.join(', ')}
-        WHERE id = $${queryIndex}
-        RETURNING *;
-      `;
         values.push(tourId);
 
-        const result = await clientPool.query(updateTourQuery, values);
+        const result = await clientPool.query(
+          updateTourQuery(setClauses, queryIndex),
+          values
+        );
 
         if (result.rowCount === 0) {
           throw new Error('Tour not found');
@@ -249,6 +249,12 @@ const updateTour = async (req, res) => {
       }
     } catch (error) {
       await clientPool.query('ROLLBACK');
+      if (Object.hasOwn(error, 'message')) {
+        return res.status(404).json({
+          status: 'failed',
+          message: error.message,
+        });
+      }
       res.status(404).json({
         status: 'failed',
         message: error,
@@ -399,7 +405,62 @@ const getUser = async (req, res) => {
   }
 };
 
-const updateUser = async () => {};
+const updateUser = async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({
+      status: 'failed',
+      message: errors,
+    });
+  }
+
+  const userId = req.params.id;
+  const updates = req.body;
+
+  // Build the SET part of the update query dynamically based on the request body
+  const setClauses = [];
+  const values = [];
+  let queryIndex = 1;
+
+  for (let key in updates) {
+    setClauses.push(`${key} = $${queryIndex}`);
+    values.push(updates[key]);
+    queryIndex++;
+  }
+
+  if (setClauses.length > 0) {
+    values.push(userId);
+
+    try {
+      const result = await client.query(
+        updateUserQuery(setClauses, queryIndex),
+        values
+      );
+
+      if (result.rowCount === 0) {
+        throw new Error('User not found');
+      }
+
+      res.status(200).json({
+        status: 'success',
+        data: {
+          user: result.rows[0],
+        },
+      });
+    } catch (error) {
+      if (Object.hasOwn(error, 'message')) {
+        return res.status(404).json({
+          status: 'failed',
+          message: error.message,
+        });
+      }
+      res.status(404).json({
+        status: 'failed',
+        message: error,
+      });
+    }
+  }
+};
 
 const deleteUser = async () => {};
 
@@ -421,7 +482,7 @@ app
 app
   .route('/api/v1/users/:id')
   .get(idValidation(), getUser)
-  .patch(idValidation(), updateUser)
+  .patch([idValidation(), updateUserValidation()], updateUser)
   .delete(idValidation(), deleteUser);
 
 const port = process.env.PORT || 3000;
