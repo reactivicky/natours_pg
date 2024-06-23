@@ -26,6 +26,7 @@ const createUserValidation = () => [
     .isBoolean()
     .withMessage('active must be boolean'),
   body('photo')
+    .optional()
     .isString({ max: 255 })
     .withMessage('photo should be string')
     .trim()

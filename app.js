@@ -16,7 +16,11 @@ import {
 import createTourValidation from './validations/createTour.js';
 import idValidation from './validations/id.js';
 import updateTourValidation from './validations/updateTour.js';
-import { getAllUsersQuery, getUserQuery } from './queries/users.js';
+import {
+  createUserQuery,
+  getAllUsersQuery,
+  getUserQuery,
+} from './queries/users.js';
 import createUserValidation from './validations/createUser.js';
 
 const app = express();
@@ -323,7 +327,7 @@ const getAllUsers = async (req, res) => {
 };
 
 const createUser = async (req, res) => {
-  const errors = validationResult(res);
+  const errors = validationResult(req);
   if (!errors.isEmpty()) {
     return res.status(400).json({
       status: 'failed',
@@ -331,6 +335,34 @@ const createUser = async (req, res) => {
     });
   }
   const { name, email, role, active, photo = null, password } = req.body;
+  try {
+    const userResponse = await client.query(createUserQuery, [
+      name,
+      email,
+      role,
+      active,
+      photo,
+      password,
+    ]);
+    const user = userResponse.rows[0];
+    if (user.rowCount === 0) {
+      return res.status(400).json({
+        status: 'failed',
+        message: `Could not create user`,
+      });
+    }
+    res.status(201).json({
+      status: 'success',
+      data: {
+        user,
+      },
+    });
+  } catch (error) {
+    res.status(404).json({
+      status: 'failed',
+      message: error,
+    });
+  }
 };
 
 const getUser = async (req, res) => {

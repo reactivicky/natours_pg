@@ -13,3 +13,9 @@ export const getUserQuery = `
   WHERE
     id = $1
 `;
+
+export const createUserQuery = `
+  INSERT INTO users (name, email, role, active, photo, password)
+  VALUES ($1, $2, $3, $4, $5, $6)
+  RETURNING id, name, email, role, active, photo;
+`;
