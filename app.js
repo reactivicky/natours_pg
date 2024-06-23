@@ -17,6 +17,7 @@ import createTourValidation from './validations/createTour.js';
 import idValidation from './validations/id.js';
 import updateTourValidation from './validations/updateTour.js';
 import { getAllUsersQuery, getUserQuery } from './queries/users.js';
+import createUserValidation from './validations/createUser.js';
 
 const app = express();
 app.use(morgan('dev'));
@@ -321,7 +322,16 @@ const getAllUsers = async (req, res) => {
   }
 };
 
-const createUser = async () => {};
+const createUser = async (req, res) => {
+  const errors = validationResult(res);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({
+      status: 'failed',
+      message: errors,
+    });
+  }
+  const { name, email, role, active, photo = null, password } = req.body;
+};
 
 const getUser = async (req, res) => {
   const errors = validationResult(req);
@@ -372,7 +382,10 @@ app
   .patch([idValidation(), updateTourValidation()], updateTour)
   .delete(idValidation(), deleteTour);
 
-app.route('/api/v1/users').get(getAllUsers).post(createUser);
+app
+  .route('/api/v1/users')
+  .get(getAllUsers)
+  .post(createUserValidation(), createUser);
 app
   .route('/api/v1/users/:id')
   .get(idValidation(), getUser)
