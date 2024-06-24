@@ -1,4 +1,5 @@
 import { validationResult } from 'express-validator';
+import isNumeric from 'validator/lib/isNumeric.js';
 import {
   getAllToursQuery,
   getTourQuery,
@@ -7,8 +8,35 @@ import {
   insertTourImagesQuery,
   deleteTourQuery,
   updateTourQuery,
+  checkTourQuery,
 } from '../queries/tours.js';
 import { query, connect } from '../db/index.js';
+
+export const checkTourId = async (req, res, next, val) => {
+  if (!isNumeric(val)) {
+    return res.status(400).json({
+      status: 'failed',
+      message: `id must be numeric`,
+    });
+  }
+  // Checking for tour id, primary keys are always indexed, so this will not be performance hit
+  const tourRes = await query(checkTourQuery, [val]);
+  if (tourRes.rowCount === 0) {
+    return res.status(404).json({
+      status: 'failed',
+      message: `Tour with id ${val} does not exist`,
+    });
+  }
+  next();
+};
+
+export const validateErrors = (req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ status: 'failed', errors: errors.array() });
+  }
+  next();
+};
 
 export const getAllTours = async (req, res) => {
   try {
@@ -30,28 +58,16 @@ export const getAllTours = async (req, res) => {
 };
 
 export const getTour = async (req, res) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).json({ status: 'failed', errors: errors.array() });
-  }
-  // If validation passed, proceed with the request handling
   const tourId = req.params.id;
   // Fetch and return tour data by ID
   try {
     const tourRes = await query(getTourQuery, [tourId]);
-    if (tourRes.rowCount !== 0) {
-      res.status(200).json({
-        status: 'success',
-        data: {
-          tour: tourRes.rows,
-        },
-      });
-    } else {
-      res.status(404).json({
-        status: 'failed',
-        message: `Tour with id ${tourId} does not exist`,
-      });
-    }
+    res.status(200).json({
+      status: 'success',
+      data: {
+        tour: tourRes.rows[0],
+      },
+    });
   } catch (error) {
     res.status(404).json({
       status: 'failed',
@@ -61,11 +77,6 @@ export const getTour = async (req, res) => {
 };
 
 export const createTour = async (req, res) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).json({ status: 'failed', errors: errors.array() });
-  }
-
   const {
     name,
     duration,
@@ -84,7 +95,7 @@ export const createTour = async (req, res) => {
 
     try {
       await clientPool.query('BEGIN');
-      const tourResponse = await query(createTourQuery, [
+      const tourResponse = await clientPool.query(createTourQuery, [
         name,
         duration,
         maxGroupSize,
@@ -139,11 +150,6 @@ export const createTour = async (req, res) => {
 };
 
 export const updateTour = async (req, res) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).json({ status: 'failed', errors: errors.array() });
-  }
-  // If validation passed, proceed with the request handling
   const tourId = req.params.id;
   const updates = req.body;
 
@@ -168,14 +174,7 @@ export const updateTour = async (req, res) => {
       if (setClauses.length > 0) {
         values.push(tourId);
 
-        const result = await clientPool.query(
-          updateTourQuery(setClauses, queryIndex),
-          values
-        );
-
-        if (result.rowCount === 0) {
-          throw new Error('Tour not found');
-        }
+        await clientPool.query(updateTourQuery(setClauses, queryIndex), values);
 
         // Update start dates if provided
         if (updates.startDates) {
@@ -218,12 +217,6 @@ export const updateTour = async (req, res) => {
       }
     } catch (error) {
       await clientPool.query('ROLLBACK');
-      if (Object.hasOwn(error, 'message')) {
-        return res.status(404).json({
-          status: 'failed',
-          message: error.message,
-        });
-      }
       res.status(404).json({
         status: 'failed',
         message: error,
@@ -240,44 +233,19 @@ export const updateTour = async (req, res) => {
 };
 
 export const deleteTour = async (req, res) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).json({ status: 'failed', errors: errors.array() });
-  }
-
   const tourId = req.params.id;
-
   try {
-    const clientPool = await connect();
-
-    try {
-      await clientPool.query('BEGIN');
-
-      const deletedTour = await query(deleteTourQuery, [tourId]);
-
-      if (deletedTour.rowCount === 0) {
-        throw new Error('Tour not found');
-      }
-      await clientPool.query('COMMIT');
-      res.status(200).json({
-        status: 'success',
-        data: {
-          deletedTour: deletedTour.rows[0],
-        },
-      });
-    } catch (error) {
-      await clientPool.query('ROLLBACK');
-      res.status(404).json({
-        status: 'failed',
-        message: error,
-      });
-    } finally {
-      clientPool.release();
-    }
+    const deletedTour = await query(deleteTourQuery, [tourId]);
+    res.status(200).json({
+      status: 'success',
+      data: {
+        deletedTour: deletedTour.rows[0],
+      },
+    });
   } catch (error) {
-    res.status(500).json({
+    res.status(404).json({
       status: 'failed',
-      message: `Internal server error, ${error}`,
+      message: error,
     });
   }
 };

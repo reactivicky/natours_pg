@@ -1,4 +1,5 @@
 import { validationResult } from 'express-validator';
+import isNumeric from 'validator/lib/isNumeric.js';
 import { query } from '../db/index.js';
 import {
   createUserQuery,
@@ -7,6 +8,23 @@ import {
   getUserQuery,
   updateUserQuery,
 } from '../queries/users.js';
+
+export const checkId = async (req, res, next, val) => {
+  if (!isNumeric(val)) {
+    return res.status(400).json({
+      status: 'failed',
+      message: `id must be numeric`,
+    });
+  }
+  const userRes = await query(getUserQuery, [val]);
+  if (userRes.rowCount === 0) {
+    return res.status(404).json({
+      status: 'failed',
+      message: `User with id ${val} does not exist`,
+    });
+  }
+  next();
+};
 
 export const getAllUsers = async (req, res) => {
   try {

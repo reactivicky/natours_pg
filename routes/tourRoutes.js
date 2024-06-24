@@ -1,8 +1,9 @@
 import { Router } from 'express';
 import createTourValidation from '../validations/createTour.js';
 import updateTourValidation from '../validations/updateTour.js';
-import idValidation from '../validations/id.js';
 import {
+  checkTourId,
+  validateErrors,
   createTour,
   deleteTour,
   getAllTours,
@@ -12,12 +13,16 @@ import {
 
 const router = Router();
 
-router.route('/').get(getAllTours).post(createTourValidation(), createTour);
+router.param('id', checkTourId);
+router
+  .route('/')
+  .get(getAllTours)
+  .post(createTourValidation(), validateErrors, createTour);
 
 router
   .route('/:id')
-  .get(idValidation(), getTour)
-  .patch([idValidation(), updateTourValidation()], updateTour)
-  .delete(idValidation(), deleteTour);
+  .get(getTour)
+  .patch(updateTourValidation(), validateErrors, updateTour)
+  .delete(deleteTour);
 
 export default router;

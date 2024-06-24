@@ -25,6 +25,12 @@ export const getAllToursQuery = `
       t.id;
 `;
 
+export const checkTourQuery = `
+  SELECT id
+  FROM tours
+  WHERE id = $1;
+`;
+
 export const getTourQuery = `
   SELECT 
       t.id,
