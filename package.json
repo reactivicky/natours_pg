@@ -3,11 +3,11 @@
   "version": "1.0.0",
   "description": "Learning node, express",
   "type": "module",
-  "main": "app.js",
+  "main": "server.js",
   "scripts": {
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
-    "dev": "nodemon app.js"
+    "dev": "nodemon server.js"
   },
   "keywords": [],
   "author": "Vignesh",

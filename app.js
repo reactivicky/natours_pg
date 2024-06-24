@@ -2,7 +2,6 @@ import 'dotenv/config';
 import express from 'express';
 import morgan from 'morgan';
 import { rateLimit } from 'express-rate-limit';
-import { connect } from './db/index.js';
 import tourRouter from './routes/tourRoutes.js';
 import userRouter from './routes/userRoutes.js';
 
@@ -23,13 +22,4 @@ app.use(limiter);
 app.use('/api/v1/tours', tourRouter);
 app.use('/api/v1/users', userRouter);
 
-const port = process.env.PORT || 3000;
-app.listen(port, async () => {
-  try {
-    await connect();
-    console.log('Connected to db...');
-    console.log(`App listening on port ${port}...`);
-  } catch (error) {
-    console.error('Could not connect to db!', error);
-  }
-});
+export default app;
