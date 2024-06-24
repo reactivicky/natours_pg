@@ -1,7 +1,7 @@
-import { validationResult } from 'express-validator';
 import isNumeric from 'validator/lib/isNumeric.js';
 import { query } from '../db/index.js';
 import {
+  checkUserQuery,
   createUserQuery,
   deleteUserQuery,
   getAllUsersQuery,
@@ -9,14 +9,14 @@ import {
   updateUserQuery,
 } from '../queries/users.js';
 
-export const checkId = async (req, res, next, val) => {
+export const checkUserId = async (req, res, next, val) => {
   if (!isNumeric(val)) {
     return res.status(400).json({
       status: 'failed',
       message: `id must be numeric`,
     });
   }
-  const userRes = await query(getUserQuery, [val]);
+  const userRes = await query(checkUserQuery, [val]);
   if (userRes.rowCount === 0) {
     return res.status(404).json({
       status: 'failed',
@@ -46,13 +46,6 @@ export const getAllUsers = async (req, res) => {
 };
 
 export const createUser = async (req, res) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).json({
-      status: 'failed',
-      message: errors,
-    });
-  }
   const { name, email, role, active, photo = null, password } = req.body;
   try {
     const userResponse = await query(createUserQuery, [
@@ -64,12 +57,6 @@ export const createUser = async (req, res) => {
       password,
     ]);
     const user = userResponse.rows[0];
-    if (user.rowCount === 0) {
-      return res.status(400).json({
-        status: 'failed',
-        message: `Could not create user`,
-      });
-    }
     res.status(201).json({
       status: 'success',
       data: {
@@ -85,25 +72,9 @@ export const createUser = async (req, res) => {
 };
 
 export const getUser = async (req, res) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).json({
-      status: 'failed',
-      message: errors,
-    });
-  }
-
   const userId = req.params.id;
-
   try {
     const userRes = await query(getUserQuery, [userId]);
-
-    if (userRes.rowCount === 0) {
-      return res.status(404).json({
-        status: 'failed',
-        message: `User with id ${userId} does not exist`,
-      });
-    }
     res.status(200).json({
       status: 'success',
       data: {
@@ -111,7 +82,7 @@ export const getUser = async (req, res) => {
       },
     });
   } catch (error) {
-    res.status(500).json({
+    res.status(404).json({
       status: 'failed',
       message: error,
     });
@@ -119,14 +90,6 @@ export const getUser = async (req, res) => {
 };
 
 export const updateUser = async (req, res) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).json({
-      status: 'failed',
-      message: errors,
-    });
-  }
-
   const userId = req.params.id;
   const updates = req.body;
 
@@ -149,11 +112,6 @@ export const updateUser = async (req, res) => {
         updateUserQuery(setClauses, queryIndex),
         values
       );
-
-      if (result.rowCount === 0) {
-        throw new Error('User not found');
-      }
-
       res.status(200).json({
         status: 'success',
         data: {
@@ -161,12 +119,6 @@ export const updateUser = async (req, res) => {
         },
       });
     } catch (error) {
-      if (Object.hasOwn(error, 'message')) {
-        return res.status(404).json({
-          status: 'failed',
-          message: error.message,
-        });
-      }
       res.status(404).json({
         status: 'failed',
         message: error,
@@ -176,17 +128,9 @@ export const updateUser = async (req, res) => {
 };
 
 export const deleteUser = async (req, res) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).json({ status: 'failed', errors: errors.array() });
-  }
   const userId = req.params.id;
   try {
     const deletedUser = await query(deleteUserQuery, [userId]);
-
-    if (deletedUser.rowCount === 0) {
-      throw new Error('User not found');
-    }
     res.status(200).json({
       status: 'success',
       data: {
@@ -194,12 +138,6 @@ export const deleteUser = async (req, res) => {
       },
     });
   } catch (error) {
-    if (Object.hasOwn(error, 'message')) {
-      return res.status(404).json({
-        status: 'failed',
-        message: error.message,
-      });
-    }
     res.status(404).json({
       status: 'failed',
       message: error,

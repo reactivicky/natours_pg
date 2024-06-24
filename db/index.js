@@ -9,6 +9,6 @@ const pool = new Pool({
   port: process.env.PG_PORT,
 });
 
-export const query = (text, params) => pool.query(text, params);
+export const query = (sqlStatement, params) => pool.query(sqlStatement, params);
 
 export const connect = async () => await pool.connect();

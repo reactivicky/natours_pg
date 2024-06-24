@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { validateErrors } from '../helpers.js';
 import createUserValidation from '../validations/createUser.js';
 import updateUserValidation from '../validations/updateUser.js';
 import {
@@ -7,18 +8,20 @@ import {
   deleteUser,
   getUser,
   updateUser,
+  checkUserId,
 } from '../controllers/userController.js';
-import { checkId } from '../controllers/userController.js';
 
 const router = Router();
 
-router.param('id', checkId);
-
-router.route('/').get(getAllUsers).post(createUserValidation(), createUser);
+router.param('id', checkUserId);
+router
+  .route('/')
+  .get(getAllUsers)
+  .post(createUserValidation(), validateErrors, createUser);
 router
   .route('/:id')
   .get(getUser)
-  .patch(updateUserValidation(), updateUser)
+  .patch(updateUserValidation(), validateErrors, updateUser)
   .delete(deleteUser);
 
 export default router;

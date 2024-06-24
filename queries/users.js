@@ -5,6 +5,12 @@ export const getAllUsersQuery = `
     users;
 `;
 
+export const checkUserQuery = `
+  SELECT id
+  FROM users
+  WHERE id = $1;
+`;
+
 export const getUserQuery = `
   SELECT 
       id, name, email, role, active, photo

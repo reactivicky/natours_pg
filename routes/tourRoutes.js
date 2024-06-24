@@ -1,9 +1,9 @@
 import { Router } from 'express';
+import { validateErrors } from '../helpers.js';
 import createTourValidation from '../validations/createTour.js';
 import updateTourValidation from '../validations/updateTour.js';
 import {
   checkTourId,
-  validateErrors,
   createTour,
   deleteTour,
   getAllTours,
@@ -18,7 +18,6 @@ router
   .route('/')
   .get(getAllTours)
   .post(createTourValidation(), validateErrors, createTour);
-
 router
   .route('/:id')
   .get(getTour)

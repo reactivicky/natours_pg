@@ -1,4 +1,3 @@
-import { validationResult } from 'express-validator';
 import isNumeric from 'validator/lib/isNumeric.js';
 import {
   getAllToursQuery,
@@ -26,14 +25,6 @@ export const checkTourId = async (req, res, next, val) => {
       status: 'failed',
       message: `Tour with id ${val} does not exist`,
     });
-  }
-  next();
-};
-
-export const validateErrors = (req, res, next) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).json({ status: 'failed', errors: errors.array() });
   }
   next();
 };
