@@ -1,29 +1,43 @@
-export const getAllToursQuery = `
-  SELECT 
-      t.id,
-      t.name,
-      t.duration,
-      t.maxGroupSize,
-      t.difficulty,
-      t.ratingsAverage,
-      t.ratingsQuantity,
-      t.price,
-      t.summary,
-      t.description,
-      t.imageCover,
-      ARRAY_AGG(DISTINCT td.start_date) AS start_dates,
-      ARRAY_AGG(DISTINCT ti.image) AS images
-  FROM 
-      tours t
-  LEFT JOIN 
-      tour_dates td ON t.id = td.tour_id
-  LEFT JOIN 
-      tour_images ti ON t.id = ti.tour_id
-  GROUP BY 
-      t.id
-  ORDER BY 
-      t.id;
-`;
+import { pg } from '../db/index.js';
+
+export const getAllToursQuery = async (filters) => {
+  try {
+    const query = pg('tours as t')
+      .leftJoin('tour_dates as td', 't.id', 'td.tour_id')
+      .leftJoin('tour_images as ti', 't.id', 'ti.tour_id')
+      .select(
+        't.id',
+        't.name',
+        't.duration',
+        't.maxGroupSize',
+        't.difficulty',
+        't.ratingsAverage',
+        't.ratingsQuantity',
+        't.price',
+        't.summary',
+        't.description',
+        't.imageCover',
+        't.createdAt',
+        pg.raw('ARRAY_AGG(DISTINCT td.start_date) AS startDates'),
+        pg.raw('ARRAY_AGG(DISTINCT ti.image) AS images')
+      )
+      .groupBy('t.id')
+      .orderBy('t.id');
+
+    if (filters?.duration) {
+      query.where('t.duration', filters.duration);
+    }
+    if (filters?.price) {
+      query.where('t.price', filters.price);
+    }
+
+    const tours = await query;
+    return tours;
+  } catch (error) {
+    console.error('Error fetching tours:', error);
+    throw error;
+  }
+};
 
 export const checkTourQuery = `
   SELECT id
@@ -36,15 +50,16 @@ export const getTourQuery = `
       t.id,
       t.name,
       t.duration,
-      t.maxGroupSize,
+      t."maxGroupSize",
       t.difficulty,
-      t.ratingsAverage,
-      t.ratingsQuantity,
+      t."ratingsAverage",
+      t."ratingsQuantity",
       t.price,
       t.summary,
       t.description,
-      t.imageCover,
-      ARRAY_AGG(DISTINCT td.start_date) AS start_dates,
+      t."imageCover",
+      t."createdAt",
+      ARRAY_AGG(DISTINCT td.start_date) AS startDates,
       ARRAY_AGG(DISTINCT ti.image) AS images
   FROM 
       tours t

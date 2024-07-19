@@ -1,6 +1,6 @@
 CREATE TABLE tours (
   id SERIAL PRIMARY KEY,
-  name VARCHAR(255) NOT NULL,
+  name VARCHAR(255) NOT NULL UNIQUE,
   duration INT NOT NULL,
   maxGroupSize INT NOT NULL,
   difficulty VARCHAR(55) NOT NULL,
@@ -10,6 +10,7 @@ CREATE TABLE tours (
   summary VARCHAR(255) NOT NULL,
   description VARCHAR(1000) NOT NULL,
   imageCover VARCHAR(255)
+  createdAt TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP;
 );
 
 INSERT INTO tours (name, duration, maxGroupSize, difficulty, ratingsAverage, ratingsQuantity, price, summary, description, imageCover)

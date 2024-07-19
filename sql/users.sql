@@ -1,11 +1,11 @@
 create table users (
-	id serial primary key,
-	name varchar(255) not null,
-	email varchar(255) not null unique,
-	role varchar(50) not null,
-	active boolean not null,
-	photo varchar(255),
-	password varchar(255) not null
+	id SERIAL PRIMARY KEY,
+	name VARCHAR(255) NOT NULL UNIQUE,
+	email VARCHAR(255) NOT NULL UNIQUE,
+	role VARCHAR(255) NOT NULL,
+	active BOOLEAN NOT NULL,
+	photo VARCHAR(255),
+	password VARCHAR(255) NOT NULL
 );
 
 INSERT INTO users (name, email, role, active, photo, password) VALUES

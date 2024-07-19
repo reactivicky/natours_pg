@@ -7,7 +7,7 @@ import {
   getAllUsersQuery,
   getUserQuery,
   updateUserQuery,
-} from '../queries/users.js';
+} from '../models/users.js';
 
 export const checkUserId = async (req, res, next, val) => {
   if (!isNumeric(val)) {

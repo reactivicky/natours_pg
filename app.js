@@ -5,7 +5,7 @@ import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import { rateLimit } from 'express-rate-limit';
 import tourRouter from './routes/tourRoutes.js';
-import userRouter from './routes/userRoutes.js';
+// import userRouter from './routes/userRoutes.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -30,6 +30,6 @@ const limiter = rateLimit({
 app.use(limiter);
 
 app.use('/api/v1/tours', tourRouter);
-app.use('/api/v1/users', userRouter);
+// app.use('/api/v1/users', userRouter);
 
 export default app;
